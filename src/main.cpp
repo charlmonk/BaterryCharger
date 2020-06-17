@@ -1,14 +1,24 @@
-/* Este programa se desarrollo con la finalidad de controlar
-/ el ciclo de operación de un cargador de baterias
+/*
+* Este programa se desarrollo con la finalidad de controlar
+* el ciclo de operación de un cargador de baterias genérico
+* al mismo se le configurarán 3 variables:
+*    - Tiempo de carga TienpoCarga
+*    - Tiempo de reposo TiempoReposo
+*    - Número de ciclos NroCiclos
+* estos parámetros permitirán repetir los ciclos de forma 
+* automáticas y mejorar así el proceso de carga y reducir
+* el tererioro de una carga prolongada le hace a una batería
+* de plomo automotriz.
+*
+* Desarrollador: Carlos Rangel
+* fecha: 16/06/2020
+* Revisión: V.1.0
 */ 
-
 
 #include <Arduino.h>
 #include <PinButton.h>
 #include <TimerOne.h>
 #include <TM1637Display.h>
-
-
 
 /**************************
 * Definición de Variables *
@@ -18,8 +28,8 @@
 unsigned char pinClk = 9;         // Pin de Clock con display TM1637
 unsigned char pinDIO = 10;        // Pin de Datos con display TM1637
 unsigned char brightness = 3;    // Variable para intensidad del display del 0 al 7
-unsigned int printDelay = 800;    // Retardo del scroll del display en ms
-bool DosPuntos = true;            // Estado de los 2 puntos del display
+//unsigned int printDelay = 800;    // Retardo del scroll del display en ms
+//bool DosPuntos = true;            // Estado de los 2 puntos del display
 unsigned char pos = 1;
 
 /*********** Configuración predefinida del cargador ************/
@@ -45,11 +55,11 @@ unsigned char ContMin = 0;        // Variable de registro de minutos transcurrid
 
 /************** Variables auxiliares ********************/
 bool EstReposo = false;           // Estado del reposo para diferenciar de la carga
-unsigned char varTiempo;
-unsigned char Tcarga;
-unsigned char Treposo;
+//unsigned char varTiempo;
+//unsigned char Tcarga;
+//unsigned char Treposo;
 unsigned char Nciclo;
-char varCfg [3] = {30,30,2};      // Arreglo con las variables de configuración : T Carga, T Pausa, N Ciclos
+//char varCfg [3] = {30,30,2};      // Arreglo con las variables de configuración : T Carga, T Pausa, N Ciclos
 bool Estado = false;              // Variable de estado del cargador
 
 const uint8_t SEG_CARGA[] = {SEG_A};
@@ -63,17 +73,12 @@ const uint8_t SEG_HOLA[] = {
   SEG_A | SEG_B | SEG_C | SEG_E | SEG_F | SEG_G,   // A
   };
 
-
-
 const uint8_t SEG_DONE[] = {
 	SEG_B | SEG_C | SEG_D | SEG_E | SEG_G,           // d
 	SEG_A | SEG_B | SEG_C | SEG_D | SEG_E | SEG_F,   // O
 	SEG_C | SEG_E | SEG_G,                           // n
 	SEG_A | SEG_D | SEG_E | SEG_F | SEG_G            // E
 	};
-
-
-
 
 // Creación de los objetos basados en las librerías
 
@@ -83,11 +88,12 @@ PinButton BotonSubir(4);
 PinButton BotonBajar(5);
 TM1637Display display(pinClk, pinDIO);
 
-
-/***************************************************************
-* Función para mostrar en puerto los valores de los contadores *
-* que se ejecutará cada segundo                                *
-***************************************************************/
+/*
+* Muestra en el display el valor de los minutos restantes en el ciclo de
+* automatico, dependiendo de si esta cargando o en reposo, se ver la 
+* diferencia dependiendo de la ubicación el conteo, si aparece a la 
+* izquierda esta cargando y si aparece a la derecha esta en reposo.
+*/
 void Visualizar(void)  
 {  
   if (!EstReposo && FlagEst[4]) 
@@ -100,16 +106,13 @@ void Visualizar(void)
     display.clear();
     display.showNumberDec((TiempoReposo - ContMin), false, 4, 0);
   }
-  
 }
 
-/******************************************************
-* Función para parpadeo de led cada segundo           *
-* Esta rutina tiene como proposito  usar el led       *
-* del pin 13 del arduino como un indicador para el    *
-* cambio de estado por la llamada de la interrupción  *
-* que está programada para cada un segundo            *
-*******************************************************/
+/*
+* Esta rutina tiene como proposito  usar el led del pin 13 del arduino
+* como un indicador para el cambio de estado por cada llamada de la 
+* interrupción de temporizado.
+*/
 void parpadeo1seg(void) 
 {
   if (FlagEst[4])
@@ -128,14 +131,11 @@ void parpadeo1seg(void)
   }
 }
 
-/**********************************************************************************
-* Función para la cuenta del minuto y su cambio cada 60 segundos, los segundos la *
-* variable conteo se incrementa para ser comparada con Tiempo de carga y tiempo   *
-* de reposo respectivamente y conteo cambia cada segundo desde 60 a 0             *
-***********************************************************************************/
-
-
-
+/*
+* Función para decrementar cada segundo la variable de conteo al cabo
+* de 1 minuto incrementa la Variable ConMin para ser usada de referencia de
+* mas adelante comparación.
+*/
 void cuentAtras(void)
 {
   if (conteo == 59) 
@@ -146,10 +146,9 @@ void cuentAtras(void)
   conteo  = conteo + 1;
 }
 
-/*************************************************
-* Función de Interupción por temporizado a 1 Seg *
-**************************************************/
-
+/*
+* Función de Interupción por temporizado a 1 Seg
+*/
 void IntSeg(void) 
 {                                   //  Cuenta regresiva de 59 segundos, al llegar a cero
   cuentAtras();
@@ -160,17 +159,12 @@ void IntSeg(void)
   Serial.print(".");                //  Esta variable es el contador de segundos cuando
   Serial.print(conteo, DEC);        //  Activa la interrupción por temporizador 
   //Visualizar();                   // Se aprovecha la llamada de la interrupción para mostrar en puerto
-                                    // los valores de los contadores
 }
 
-
-
-
-/**********************************************************
-* Función de tiempo en espera por intervención de usuario *
-* durante la estadia en los menus de configuración        *
-***********************************************************/
-
+/*
+* Función de tiempo en espera por intervención de usuario
+* durante la estadia en los menus de configuración
+*/
 void conteo5Seg(void) 
 {
   pos = 4;
@@ -179,10 +173,9 @@ void conteo5Seg(void)
   ContMin = 0;
 }
 
-/**********************************************************
+/*
 * Llamada para activar la salida solo si no lo está antes *
-***********************************************************/
-
+*/
 void ActSalida(void)
 {
   if (!digitalRead(rele))
@@ -192,10 +185,9 @@ void ActSalida(void)
   }
 }
 
-/********************************************************
-* Llamada para desactivar rele solo si no lo está antes *
-*********************************************************/
-
+/*
+* Llamada para desactivar la salida solo si no lo está antes *
+*/
 void DesSalida(void)
 {
   if (digitalRead(rele))
@@ -205,11 +197,10 @@ void DesSalida(void)
   }
 }
 
-/*********************************************************
-* Finaliza programa de carga luego de cumplir los ciclos *
-* y tiempos programados                                  *
-**********************************************************/
-
+/*
+* Finaliza programa de carga luego de cumplir los ciclos
+* y tiempos programados
+*/
 void FinaldeCarga(void)
 {
   Timer1.stop();
@@ -220,10 +211,10 @@ void FinaldeCarga(void)
   FlagEst[4] = false;
 }
 
-/*********************************************************
-* Grupo de funciones para imprimir en puerto serial las  *
-* variables configurables del programa                   *
-**********************************************************/
+/*
+* Función para imprimir en display la
+* variable TiempoCarga del programa
+*/
 void MostrarTiempoCarga(void)
 {
   display.showNumberDec(TiempoCarga);
@@ -233,6 +224,10 @@ void MostrarTiempoCarga(void)
   Serial.println(" min");
 }
 
+/*
+* Función para imprimir en display la
+* variable TiempoReposo del programa
+*/
 void MostrarTiempoReposo(void)
 {
   display.showNumberDec(TiempoReposo);
@@ -242,6 +237,10 @@ void MostrarTiempoReposo(void)
   Serial.println(" min");
 }
 
+/*
+* Función para imprimir en display la
+* variable NroCiclo del programa
+*/
 void MostrarNroCiclos(void)
 {
   display.showNumberDec(NroCiclos);
@@ -265,19 +264,18 @@ void resume (void)
   Serial.print(" Nro de Ciclos ");
   Serial.println(NroCiclos, DEC);
 }
-/*******************************
-* Saludo de inicio de programa *
-********************************/
+
+/*
+* Saludo de inicio de programa
+*/
 void bienvenida(void)
 {
   display.setSegments(SEG_HOLA);
 }
 
-
-/*******************************************
-* Función de confifuración del arduino uno *
-********************************************/
-
+/*
+* Función de confifuración del arduino uno
+*/
 void setup() 
 {
   pinMode(rele, OUTPUT);            // Define salida para relé activador
@@ -291,22 +289,20 @@ void setup()
   bienvenida();
 }
 
-/*********************
-* Programa principal *
-**********************/
+/*
+* Programa principal
+*/
 void loop() 
 {
-
 // Monitoreo de los pulsasores
   BotonCfg.update();
   BotonEntrada.update();
   BotonSubir.update();
   BotonBajar.update();
 
-
-  /********************************************************************
-  * Borra las banderdas de los menus al finalizar el tiempo de espera *
-  * *******************************************************************/
+  /*
+  * Borra las banderdas de los menus al finalizar el tiempo de espera 
+  */
 
   if (conteo == 5 && (FlagEst[1] || FlagEst[2] || FlagEst[3]) && !FlagEst[4]) 
   {
@@ -316,10 +312,10 @@ void loop()
     resume();
   }
 
-  /*********************************************************************
-  * Al pulsar Cfg luego de las configuraciones reinicia las banderas y *
-  * Muestra el resumen de las configuraciones realizadas               *
-  **********************************************************************/
+  /*
+  * Al pulsar Cfg luego de las configuraciones reinicia las banderas y
+  * Muestra el resumen de las configuraciones realizadas
+  */
 
   if (BotonCfg.isClick() && FlagEst[1] && FlagEst[2] && FlagEst[3] && !FlagEst[4] ) 
   {
@@ -328,15 +324,15 @@ void loop()
     resume();
   } 
 
-  /********************************************************************
-  * Condicionales para reconocer la entrada a los diferentes menus de *
-  * configuración del programa tiempo de carga, tiempo de reposo y    *
-  * Nro de ciclos junto con temporizado para la permanencia en los    *
-  * FlagEst[1] = Bandera del menu de Tiempo de Carga                  *
-  * FlagEst[2] = Bandera del menu de Tiempo de Reposo                 *
-  * FlagEst[3] = Bandera del menu de Número de Ciclos                 *
-  * FlagEst[4] = Bandera de inicio de programa de Carga               *
-  *********************************************************************/
+  /*
+  * Condicionales para reconocer la entrada a los diferentes menus de
+  * configuración del programa tiempo de carga, tiempo de reposo y
+  * Nro de ciclos junto con temporizado para la permanencia en los
+  * FlagEst[1] = Bandera del menu de Tiempo de Carga
+  * FlagEst[2] = Bandera del menu de Tiempo de Reposo
+  * FlagEst[3] = Bandera del menu de Número de Ciclos
+  * FlagEst[4] = Bandera de inicio de programa de Carga
+  */
 
   if (BotonCfg.isClick() && !FlagEst[4])
   {
@@ -365,13 +361,12 @@ void loop()
   
 
 
-  /******************************************************
-  * Condicionales para la modificación de las variables *
-  * de configuración                                    *
-  * Tiempo de Carga +- 5, entre 10 y 60 minutos         *
-  * Tiempo de Reposo +- 5, entre 39 y 240 minutos       *
-  * Nro de Ciclos +- 1, entre 1 y 8                     *
-  *******************************************************/
+  /*
+  * Condicionales para la modificación de las variables de configuración
+  * Tiempo de Carga +- 5, entre 10 y 60 minutos 
+  * Tiempo de Reposo +- 5, entre 39 y 240 minutos 
+  * Nro de Ciclos +- 1, entre 1 y 8
+  */
 
   if (!FlagEst[4])
   {
@@ -413,9 +408,9 @@ void loop()
     }
   }
 
-  /**********************************************************
-  * Activación de bandera para inicio del programa de carga *
-  ***********************************************************/
+  /*
+  * Activación de bandera para inicio del programa de carga
+  */
 
   if (BotonEntrada.isClick())
   {
@@ -443,8 +438,6 @@ void loop()
     }  
   }
 
-
-
   if (FlagEst[4] == true)
   {
     if (Nciclo != 0)
@@ -465,7 +458,7 @@ void loop()
           EstReposo = !EstReposo;
           ContMin = 0;
           Nciclo = Nciclo - 1;
-            Serial.print(" * * * * * *  Salida Inactiva * * * * * * * *");
+          Serial.print(" * * * * * *  Salida Inactiva * * * * * * * *");
           DesSalida();
         }
         
